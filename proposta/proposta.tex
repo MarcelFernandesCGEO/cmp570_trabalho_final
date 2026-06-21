@@ -1,0 +1,131 @@
+\documentclass[12pt, a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{parskip}
+
+\geometry{margin=2.2cm}
+
+\hypersetup{colorlinks=true, urlcolor=blue, linkcolor=black}
+
+\begin{document}
+
+\begin{center}
+    {\large\textbf{Proposta de Trabalho Final --- CMP570 Fotografia Computacional}}\\[0.3em]
+    {\normalsize\textbf{Aluno:} Marcel Fernandes Gomes \quad
+     \textbf{Data:} \today}
+\end{center}
+
+\hrule
+\vspace{0.6em}
+
+% -------------------------------------------------------------------
+\section*{1. Título}
+
+\textbf{Superresolução no Domínio de Frequências: Fine-tuning do SATLAS com Focal Frequency
+Loss para Correção do Gap Espectral Planet--Aerofoto}
+
+% -------------------------------------------------------------------
+\section*{2. Descrição}
+
+O modelo SATLAS~\cite{satlassuperres} realiza superresolução (SR) de imagens de satélite
+Sentinel-2 para resolução aerofotogramétrica (NAIP), usando uma arquitetura ESRGAN com
+entrada de múltiplas imagens (16 frames, 48 canais). Ao substituir Sentinel-2 por imagens
+PlanetScope reamostradas para 10\,m/px surge um \emph{gap espectral}: o PlanetScope preserva
+alta frequência que o Sentinel-2 não possui, fazendo o modelo SATLAS gerar alucinações de textura.
+
+Este trabalho realiza fine-tuning do SATLAS com pares Planet $\rightarrow$ aerofoto locais
+(Porto Alegre, $\sim$224\,km$^2$) e incorpora a \textbf{Focal Frequency Loss}
+(FFL)~\cite{jiang2021} como loss auxiliar no domínio espectral. A FFL computa a DFT 2D da
+saída do gerador e do ground truth e penaliza o erro componente a componente no espectro,
+com um mecanismo focal que aumenta progressivamente o peso nas frequências onde o modelo
+persiste errando. Um \emph{ablation study} com três variantes (baseline sem FFL,
+$\lambda_{\text{FFL}}=0{,}1$ e $\lambda_{\text{FFL}}=1{,}0$) quantifica o impacto espectral
+sem introduzir outros fatores de confusão. O projeto conecta diretamente aos tópicos de
+Fourier 2D, aliasing e Teorema da Convolução.
+
+% -------------------------------------------------------------------
+\section*{3. Objetivos}
+
+\begin{enumerate}[leftmargin=*, topsep=2pt, itemsep=1pt]
+    \item Reduzir o gap espectral (métrica PSD\_L2) entre a SR do SATLAS e a aerofoto GT.
+    \item Quantificar o trade-off entre fidelidade espectral (PSD\_L2) e qualidade de pixel
+          (SSIM, cPSNR) para dois valores de $\lambda_{\text{FFL}}$.
+    \item Demonstrar que a FFL é um complemento viável às losses pixel/perceptual/GAN já
+          existentes no SATLAS, sem afetar a compatibilidade com treinos anteriores.
+\end{enumerate}
+
+% -------------------------------------------------------------------
+\section*{4. Materiais e obtenção}
+
+\begin{itemize}[leftmargin=*, topsep=2pt, itemsep=1pt]
+    \item \textbf{Imagens PlanetScope (LR):} 16 GeoTIFFs RGB, cobertura $\sim$13,9\,$\times$\,16,1\,km,
+          cenas mensais de jan/2025 a abr/2026 --- obtidas via Plataforma Brasil+.
+    \item \textbf{Aerofoto ground truth (HR):} GeoTIFF Convênio do Estado do Rio Grande do Sul e Exército Brasileiro a $\sim$0,35\,m/px, disponíveis no IEDE-RS ou via 1º Centro de Geoinformação.
+    \item \textbf{Modelo pré-treinado SATLAS:} checkpoint público \texttt{esrgan\_16S2.pth}
+          (\url{https://github.com/allenai/satlas-super-resolution}).
+    \item \textbf{Infraestrutura:} GPU Tesla V100-PCIE-32GB (servidor do PPGC/UFRGS,
+          CUDA 12.9), Python 3.12, PyTorch $\geq$2.0, BasicSR.
+    \item \textbf{Código FFL:} implementação própria baseada em Jiang et al.\ (2021),
+          integrada ao SATLAS de forma retrocompatível.
+\end{itemize}
+
+% -------------------------------------------------------------------
+\section*{5. Resultados esperados}
+
+Espera-se que a FFL com $\lambda=1{,}0$ reduza o PSD\_L2 em pelo menos 5\% frente ao
+baseline, confirmando que a penalização explícita no domínio espectral corrige o gap
+Planet/aerofoto. O custo em SSIM deve ser pequeno ($|\Delta|<0{,}01$), caracterizando
+um trade-off favorável para aplicações de fidelidade espectral em SR de imagens de satélite.
+Resultados preliminares (Rodada~1, 1.476 chips) já indicaram redução de 7,2\% no PSD\_L2
+com $\lambda=1{,}0$ e queda de apenas 0,006 no SSIM.
+
+% -------------------------------------------------------------------
+\section*{6. Etapas (\textit{milestones})}
+
+\begin{enumerate}[leftmargin=*, topsep=2pt, itemsep=1pt]
+    \item Preparação dos chips (LR/HR co-registrados, 9.360 pares) --- \textit{concluída}.
+    \item Integração da FFL ao código SATLAS e configuração dos YAMLs do ablation --- \textit{concluída}.
+    \item Treinamento das 3 variantes (20.000 iters cada, $\sim$45\,min/variante na V100) --- \textit{em andamento}.
+    \item Avaliação quantitativa (SSIM, cPSNR, PSD\_L2) e geração das figuras comparativas.
+    \item Redação do relatório final e preparação dos slides.
+\end{enumerate}
+
+% -------------------------------------------------------------------
+\section*{7. Cronograma}
+
+\begin{center}
+\begin{tabular}{lll}
+    \toprule
+    Semana & Período & Atividade \\
+    \midrule
+    12 & 26/05 -- 01/06 & Treinamento Rodada 2 (em background no servidor) \\
+    13 & 02/06 -- 08/06 & Avaliação, geração de figuras, análise dos resultados \\
+    13--14 & 09/06 -- 15/06 & Redação do relatório final (LaTeX) \\
+    14--15 & 16/06 -- 22/06 & Preparação e revisão dos slides; entrega final \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{0.5em}
+\textbf{Prazo final:} 22 de junho de 2026.
+
+% -------------------------------------------------------------------
+\begin{thebibliography}{9}
+\bibitem{jiang2021}
+    L.~Jiang, B.~Dai, W.~Wu, C.~C. Loy,
+    ``Focal Frequency Loss for Image Reconstruction and Synthesis,''
+    \textit{ICCV}, pp.~13919--13929, 2021.
+\bibitem{satlassuperres}
+    P.~Wolters, F.~Bastani, A.~Kembhavi,
+    ``Zooming Out on Zooming In: Advancing Super-Resolution for Remote Sensing,''
+    \textit{arXiv:2311.18082}, 2023.
+    \url{https://arxiv.org/abs/2311.18082}.
+\end{thebibliography}
+
+\end{document}

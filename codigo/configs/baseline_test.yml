@@ -1,0 +1,57 @@
+# Config de inferência — Baseline CP06 (sem FFL)
+# Projeto Final CMP570 — Fotografia Computacional — UFRGS 2026/1
+#
+# Gera imagens SR do baseline usando net_g_9000.pth (CP06, sem FFL).
+# Saída em: trabalho_final/results/baseline/visualization/
+#
+# Uso:
+#   cd /home/marcel/Desktop/allenai/satlas-super-resolution
+#   python ssr/test.py -opt <este_arquivo>
+
+name: baseline_test
+model_type: SSRESRGANModel
+scale: 4
+num_gpu: auto
+manual_seed: 0
+
+datasets:
+  test_1:
+    name: PlanetGT_test
+    type: S2NAIPDataset
+    sentinel2_path: /home/marcel/Desktop/anotacoes_mestrado_sr/checkpoints/checkpoint_06/finetune_data_tci/planet_chips
+    naip_path: /home/marcel/Desktop/anotacoes_mestrado_sr/checkpoints/checkpoint_06/finetune_data_tci/gt_chips
+    s2_bands: ['tci']
+    n_s2_images: 16
+    rand_crop: false
+    use_hflip: false
+    use_rot: false
+    num_worker_per_gpu: 4
+    batch_size_per_gpu: 1
+    dataset_enlarge_ratio: 1
+    prefetch_mode: ~
+
+network_g:
+  type: SSR_RRDBNet
+  num_in_ch: 48
+  num_out_ch: 3
+  num_feat: 64
+  num_block: 23
+  num_grow_ch: 32
+
+path:
+  pretrain_network_g: /home/marcel/Desktop/anotacoes_mestrado_sr/checkpoints/checkpoint_06/experiments/esrgan_planet_finetune/models/net_g_9000.pth
+  strict_load_g: true
+  results_root: /home/marcel/Desktop/cmp570/trabalhos/trabalho_final/results/baseline
+
+val:
+  save_img: true
+  suffix: ~
+  metrics:
+    psnr:
+      type: calculate_psnr
+      crop_border: 4
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 4
+      test_y_channel: false

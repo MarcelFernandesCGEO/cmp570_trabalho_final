@@ -1,0 +1,143 @@
+# Baseline: L1 + Perceptual + GAN — partindo dos pesos SATLAS pré-treinados
+# Projeto Final CMP570 — Zero-shot fine-tuning (Windows)
+#
+# SEM FFL — referência do ablation
+# Ponto de partida: esrgan_16S2.pth (pretrained SATLAS, 16 imagens TCI)
+# Ajustado para: Windows (gloo, 0 workers), poucos dados (enlarge_ratio alto)
+
+name: baseline_from_pretrained
+model_type: SSRESRGANModel
+scale: 4
+num_gpu: auto
+manual_seed: 0
+
+l1_gt_usm: true
+percep_gt_usm: true
+gan_gt_usm: false
+
+datasets:
+  train:
+    name: PlanetGT_train
+    type: S2NAIPDataset
+    # AJUSTAR: caminho para seus chips no Windows
+    sentinel2_path: C:/Users/marcel.1CGEO/Desktop/zero_shot_data/planet_chips
+    naip_path:      C:/Users/marcel.1CGEO/Desktop/zero_shot_data/gt_chips
+    s2_bands: ['tci']
+    n_s2_images: 16
+    rand_crop: false
+    use_hflip: true
+    use_rot: true
+    num_worker_per_gpu: 0        # 0 obrigatório no Windows (evita deadlock no DataLoader)
+    batch_size_per_gpu: 4        # reduzido: seguro para 8–12 GB VRAM
+    dataset_enlarge_ratio: 50    # com 20 pares → 1000 amostras; com 200 → 10000
+    prefetch_mode: ~
+
+  val:
+    name: PlanetGT_val
+    type: S2NAIPDataset
+    sentinel2_path: C:/Users/marcel.1CGEO/Desktop/zero_shot_data/planet_chips
+    naip_path:      C:/Users/marcel.1CGEO/Desktop/zero_shot_data/gt_chips
+    s2_bands: ['tci']
+    n_s2_images: 16
+    rand_crop: false
+
+network_g:
+  type: SSR_RRDBNet
+  num_in_ch: 48        # 16 imagens × 3 canais TCI — compatível com esrgan_16S2.pth
+  num_out_ch: 3
+  num_feat: 64
+  num_block: 23
+  num_grow_ch: 32
+
+network_d:
+  type: SSR_UNetDiscriminatorSN
+  num_in_ch: 3
+  num_feat: 64
+  skip_connection: true
+
+path:
+  # AJUSTAR: caminho para o repo SATLAS no Windows
+  pretrain_network_g: C:/Users/marcel.1CGEO/Desktop/GitHub/satlas-super-resolution/pretrained_models/esrgan_16S2.pth
+  strict_load_g: false   # false: canal conv_first pode diferir — carrega o que é compatível
+  resume_state: ~        # null: começa do zero (sem checkpoint CP06)
+  experiments_root: C:/Users/marcel.1CGEO/Desktop/GitHub/cmp570/trabalhos/trabalho_final/zero_shot/results/baseline
+
+train:
+  ema_decay: 0.999
+
+  optim_g:
+    type: Adam
+    lr: !!float 1e-4     # lr maior: fine-tuning a partir de pretrained (não de fine-tuned)
+    weight_decay: 0
+    betas: [0.9, 0.99]
+
+  optim_d:
+    type: Adam
+    lr: !!float 1e-4
+    weight_decay: 0
+    betas: [0.9, 0.99]
+
+  scheduler:
+    type: MultiStepLR
+    milestones: [2000, 4000]   # proporcional a total_iter=5000
+    gamma: 0.5
+
+  total_iter: 5000    # ajustar conforme disponibilidade de GPU e tamanho do dataset
+  warmup_iter: -1
+
+  pixel_opt:
+    type: L1Loss
+    loss_weight: 1.0
+    reduction: mean
+
+  perceptual_opt:
+    type: PerceptualLoss
+    layer_weights:
+      'conv1_2': 0.1
+      'conv2_2': 0.1
+      'conv3_4': 1.0
+      'conv4_4': 1.0
+      'conv5_4': 1.0
+    vgg_type: vgg19
+    use_input_norm: true
+    perceptual_weight: !!float 1.0
+    style_weight: 0
+    range_norm: false
+    criterion: l1
+
+  gan_opt:
+    type: GANLoss
+    gan_type: vanilla
+    real_label_val: 1.0
+    fake_label_val: 0.0
+    loss_weight: !!float 0.1
+
+  # sem ffl_opt — este é o baseline
+
+  net_d_iters: 1
+  net_d_init_iters: 0
+
+val:
+  val_freq: !!float 5e2      # validar a cada 500 iters (mais frequente com menos iters total)
+  save_img: true             # true: salva exemplos visuais para inspecionar
+  metrics:
+    psnr:
+      type: calculate_psnr
+      crop_border: 4
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 4
+      test_y_channel: false
+
+logger:
+  print_freq: 50
+  save_checkpoint_freq: !!float 5e2
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~
+
+dist_params:
+  backend: gloo    # gloo: único backend disponível no Windows (nccl é Linux-only)
+  port: 29500

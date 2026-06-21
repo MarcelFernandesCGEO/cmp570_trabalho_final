@@ -1,0 +1,50 @@
+# -----------------------------------------------------------------------
+# Rasters grandes que NÃO são versionados (acima do limite de 100 MB do
+# GitHub e/ou redistribuição restrita). Ver dados/PROVENIENCIA.md.
+#   - GT aerofoto (gt.tif ~99 MB rodada 1 / ~844 MB rodada 2)
+#   - saídas SR (imagens/*.tif ~400 MB cada)
+#   - chips intermediários (planet_chips/, gt_chips/)
+# Os TIFs Planet de amostra (dados/planet/check03_*.tif, ~3,5 MB cada) SÃO versionados.
+# -----------------------------------------------------------------------
+**/gt/
+**/gt.tif
+**/*_sr.tif
+imagens/
+data_final/
+**/planet_chips/
+**/gt_chips/
+**/sr_flat/
+**/gt_flat/
+
+# Checkpoints e estados de treino
+**/*.pth
+**/*.state
+**/models/
+**/training_states/
+**/visualization/
+**/tb_logger/
+
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# LaTeX (mantém .tex e .pdf; ignora artefatos de build)
+*.aux
+*.log
+# exceção: log de treino versionado como artefato de resultado
+!resultados/zero_shot_5k/training.log
+*.nav
+*.snm
+*.toc
+*.out
+*.synctex*
+*.fls
+*.fdb_latexmk
+
+# Sistema
+*.aux.xml
+.DS_Store
+Thumbs.db

@@ -1,0 +1,37 @@
+# Configuração de INFERÊNCIA para pesos treinados no zero_shot (Planet → Aerofoto)
+# Adaptado de config_server.yml para:
+#   - 16 imagens Planet (num_in_ch: 48 = 16 × 3)
+#   - Sem Docker — roda direto no venv do servidor
+#
+# ATENÇÃO: o caminho do peso é substituído pelo rodar_infer_ablation.sh.
+# Para testar manualmente, troque __WEIGHTS_PATH__ pelo caminho real.
+#
+# Uso manual:
+#   cd ~/cmp570_final/satlas-super-resolution
+#   python pipeline_sr_multigpu.py -opt config_infer_planet.yml \
+#       -input /caminho/planet_stack.tif \
+#       -output /caminho/saida_sr.tif \
+#       -imagens 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 \
+#       -ponderacao linear
+
+name: planet_sr_inferencia
+model_type: SSRESRGANModel
+scale: 4
+num_gpu: 1
+
+# 16 imagens Planet × 3 canais RGB = 48 canais de entrada
+n_lr_images: 16
+
+network_g:
+  type: SSR_RRDBNet
+  num_in_ch: 48       # 16 × 3 — deve coincidir com o treinamento zero_shot
+  num_out_ch: 3
+  num_feat: 64
+  num_block: 23
+  num_grow_ch: 32
+
+path:
+  # === PESO DO MODELO — substituído automaticamente pelo script ===
+  pretrain_network_g: '__WEIGHTS_PATH__'
+  param_key_g: 'params_ema'
+  strict_load_g: true

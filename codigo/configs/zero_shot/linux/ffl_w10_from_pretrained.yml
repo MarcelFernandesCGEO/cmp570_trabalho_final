@@ -1,0 +1,141 @@
+# FFL lambda=1.0: L1 + Perceptual + GAN + FFL — Linux
+# Projeto Final CMP570 — Zero-shot fine-tuning
+
+name: ffl_w10_from_pretrained
+model_type: SSRESRGANModel
+scale: 4
+num_gpu: auto
+manual_seed: 0
+
+l1_gt_usm: true
+percep_gt_usm: true
+gan_gt_usm: false
+
+datasets:
+  train:
+    name: PlanetGT_train
+    type: S2NAIPDataset
+    sentinel2_path: /dados/user_data/marcel/cmp570_final/zero_shot_data/planet_chips
+    naip_path:      /dados/user_data/marcel/cmp570_final/zero_shot_data/gt_chips
+    s2_bands: ['tci']
+    n_s2_images: 16
+    rand_crop: false
+    use_hflip: true
+    use_rot: true
+    num_worker_per_gpu: 4
+    batch_size_per_gpu: 4
+    dataset_enlarge_ratio: 50
+    prefetch_mode: ~
+
+  val:
+    name: PlanetGT_val
+    type: S2NAIPDataset
+    sentinel2_path: /dados/user_data/marcel/cmp570_final/zero_shot_data/planet_chips
+    naip_path:      /dados/user_data/marcel/cmp570_final/zero_shot_data/gt_chips
+    s2_bands: ['tci']
+    n_s2_images: 16
+    rand_crop: false
+
+network_g:
+  type: SSR_RRDBNet
+  num_in_ch: 48
+  num_out_ch: 3
+  num_feat: 64
+  num_block: 23
+  num_grow_ch: 32
+
+network_d:
+  type: SSR_UNetDiscriminatorSN
+  num_in_ch: 3
+  num_feat: 64
+  skip_connection: true
+
+path:
+  pretrain_network_g: /dados/user_data/marcel/cmp570_final/satlas-super-resolution/pretrained_models/esrgan_16S2.pth
+  strict_load_g: false
+  resume_state: ~
+  experiments_root: /dados/user_data/marcel/cmp570_final/trabalho_final/zero_shot/results/ffl_w10
+
+train:
+  ema_decay: 0.999
+
+  optim_g:
+    type: Adam
+    lr: !!float 1e-4
+    weight_decay: 0
+    betas: [0.9, 0.99]
+
+  optim_d:
+    type: Adam
+    lr: !!float 1e-4
+    weight_decay: 0
+    betas: [0.9, 0.99]
+
+  scheduler:
+    type: MultiStepLR
+    milestones: [8000, 16000]
+    gamma: 0.5
+
+  total_iter: 20000
+  warmup_iter: -1
+
+  pixel_opt:
+    type: L1Loss
+    loss_weight: 1.0
+    reduction: mean
+
+  perceptual_opt:
+    type: PerceptualLoss
+    layer_weights:
+      'conv1_2': 0.1
+      'conv2_2': 0.1
+      'conv3_4': 1.0
+      'conv4_4': 1.0
+      'conv5_4': 1.0
+    vgg_type: vgg19
+    use_input_norm: true
+    perceptual_weight: !!float 1.0
+    style_weight: 0
+    range_norm: false
+    criterion: l1
+
+  gan_opt:
+    type: GANLoss
+    gan_type: vanilla
+    real_label_val: 1.0
+    fake_label_val: 0.0
+    loss_weight: !!float 0.1
+
+  # --- Focal Frequency Loss ---
+  ffl_opt:
+    type: FocalFrequencyLoss
+    loss_weight: 1.0   # lambda=1.0: peso dominante — testa agressividade maxima da FFL
+    alpha: 1.0
+
+  net_d_iters: 1
+  net_d_init_iters: 0
+
+val:
+  val_freq: !!float 1e3
+  save_img: true
+  metrics:
+    psnr:
+      type: calculate_psnr
+      crop_border: 4
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 4
+      test_y_channel: false
+
+logger:
+  print_freq: 100
+  save_checkpoint_freq: !!float 1e3
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~
+
+dist_params:
+  backend: nccl
+  port: 29500

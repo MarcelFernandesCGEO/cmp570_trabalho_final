@@ -52,31 +52,9 @@
     \end{column}
     \begin{column}{0.42\textwidth}
       \centering
-      \begin{tabular}{c}
-        \textbf{Pipeline SATLAS} \\[0.3em]
-        \fbox{\parbox{0.85\linewidth}{\centering\small
-          16 frames Sentinel-2\\
-          (32$\times$32\,px cada)
-        }}\\[0.15em]
-        $\downarrow$\\[0.15em]
-        \fbox{\parbox{0.85\linewidth}{\centering\small
-          ESRGAN / RRDBNet\\
-          (48 canais, 23 RRDB)
-        }}\\[0.15em]
-        $\downarrow$\\[0.15em]
-        \fbox{\parbox{0.85\linewidth}{\centering\small
-          SR 128$\times$128\,px\\
-          qualidade NAIP ($\approx$2{,}5\,m/px)
-        }}
-      \end{tabular}
-      \vspace{0.4em}
-
-      \begin{block}{\small Princípio multi-frame}
-        {\small Múltiplos frames com deslocamento sub-pixel
-        permitem reconstruir detalhe fino invisível num único frame.}
-      \end{block}
-
-      {\small\texttt{esrgan\_16S2.pth} --- ponto de partida\\do nosso \textit{fine-tuning}.}
+      \includegraphics[width=\linewidth]{satlas_intro_comparison.png}\\[0.3em]
+      {\small Exemplo SATLAS: Sentinel-2 ($\sim$10\,m/px) $\to$ SR ($\sim$2{,}5\,m/px).\\
+       Estrada e bordas de mata invisíveis no LR, nítidas no SR.}
     \end{column}
   \end{columns}
 

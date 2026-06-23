@@ -315,6 +315,51 @@ de vegetação), refletindo a maior resolução espacial do sensor aéreo.
     \label{fig:barras}
 \end{figure}
 
+\subsection{Comparação Visual}
+
+As Figuras~\ref{fig:visual_cond} e~\ref{fig:visual_urban} apresentam comparações
+visuais de crops das imagens produzidas pelas três variantes, junto com a entrada
+Planet (LR ampliada 4$\times$ por vizinho mais próximo) e a saída SATLAS sem
+fine-tuning (zero-shot). Os crops de 192$\times$192\,px foram selecionados em
+regiões de alta variância para evidenciar diferenças de detalhe.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../imagens_auxiliares/crops_final/cond_zoom_panel_192px.png}
+    \caption{Comparação visual --- região de condomínio (crop 192$\times$192\,px no SR,
+    ampliado para visualização). Da esquerda para a direita: Planet LR (upscale $4\times$
+    vizinho mais próximo), SATLAS zero-shot, Baseline (fine-tuning sem FFL),
+    FFL $\lambda=0{,}1$ e FFL $\lambda=1{,}0$. O domain gap do zero-shot é evidente:
+    textura e paleta incompatíveis com a aerofoto RS. O fine-tuning recupera
+    detalhe local e corrige a paleta. FFL $\lambda=1{,}0$ apresenta textura
+    ligeiramente mais rica nas bordas e telhados, consistente com o ganho espectral
+    medido pelo PSD\_L2.}
+    \label{fig:visual_cond}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../imagens_auxiliares/crops_final/urban_zoom_panel_192px.png}
+    \caption{Comparação visual --- malha urbana densa (crop 192$\times$192\,px).
+    Mesmo padrão da Figura~\ref{fig:visual_cond}: Planet borrado, SATLAS zero-shot
+    com artefatos de domínio, variantes fine-tuned nítidas e coerentes com a aerofoto.
+    As diferenças visuais entre Baseline e variantes FFL são sutis, consistentes com
+    os pequenos $\Delta$SSIM e $\Delta$cPSNR da Tabela~\ref{tab:resultados}.
+    O ganho da FFL $\lambda=1{,}0$ é primariamente espectral --- capturado pelo
+    PSD\_L2, não pelo olho humano.}
+    \label{fig:visual_urban}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../imagens_auxiliares/crops_final/cond_panel_320px.png}
+    \caption{Visão geral da região de condomínio (crop 320$\times$320\,px) para
+    as cinco variantes. A escala maior evidencia o ganho de estrutura do
+    fine-tuning frente ao zero-shot, e o alinhamento de paleta com a aerofoto
+    local (telhas terracota, vegetação verde).}
+    \label{fig:visual_cond_overview}
+\end{figure}
+
 \subsection{Discussão}
 
 O resultado é consistente com o mecanismo da FFL. O L1 minimiza o erro

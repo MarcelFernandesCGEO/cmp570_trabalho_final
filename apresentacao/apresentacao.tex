@@ -14,8 +14,8 @@
 \usepackage{multirow}
 \usepackage{xcolor}
 
-% Figuras geradas pelos experimentos (rodada 1 — 1.476 chips)
-\graphicspath{{../resultados/evaluation/}}
+% Figuras geradas pelos experimentos (rodada 1 — 1.476 chips) e crops visuais
+\graphicspath{{../evaluation/}{../imagens_auxiliares/crops_final/}}
 
 \definecolor{gain}{RGB}{0,128,0}
 \definecolor{loss}{RGB}{180,0,0}
@@ -31,6 +31,107 @@
 
 \begin{frame}
   \titlepage
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{O que é o SATLAS?}
+
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \textbf{Satlas Super-Resolution} --- AllenAI (Wolters et al., 2023)
+      \begin{itemize}
+        \item \textbf{Entrada:} série de 16 frames \textbf{Sentinel-2}
+              (RGB, 32$\times$32\,px, $\approx$10\,m/px)
+        \item \textbf{Saída:} imagem super-resolvida $\mathbf{4\times}$
+              (128$\times$128\,px, qualidade NAIP $\approx$2{,}5\,m/px)
+        \item \textbf{Gerador:} ESRGAN / RRDBNet --- 23 blocos RRDB,
+              48 canais de entrada (16 frames $\times$ 3 bandas)
+        \item \textbf{Treinado em:} $\sim$44 milhões de pares
+              Sentinel-2 / NAIP (EUA, 2019--2020)
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \centering
+      \begin{tabular}{c}
+        \textbf{Pipeline SATLAS} \\[0.3em]
+        \fbox{\parbox{0.85\linewidth}{\centering\small
+          16 frames Sentinel-2\\
+          (32$\times$32\,px cada)
+        }}\\[0.15em]
+        $\downarrow$\\[0.15em]
+        \fbox{\parbox{0.85\linewidth}{\centering\small
+          ESRGAN / RRDBNet\\
+          (48 canais, 23 RRDB)
+        }}\\[0.15em]
+        $\downarrow$\\[0.15em]
+        \fbox{\parbox{0.85\linewidth}{\centering\small
+          SR 128$\times$128\,px\\
+          qualidade NAIP ($\approx$2{,}5\,m/px)
+        }}
+      \end{tabular}
+      \vspace{0.4em}
+
+      \begin{block}{\small Princípio multi-frame}
+        {\small Múltiplos frames com deslocamento sub-pixel
+        permitem reconstruir detalhe fino invisível num único frame.}
+      \end{block}
+
+      {\small\texttt{esrgan\_16S2.pth} --- ponto de partida\\do nosso \textit{fine-tuning}.}
+    \end{column}
+  \end{columns}
+
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{SATLAS na prática: \textit{fine-tuning} para o domínio Planet}
+
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+      \small
+      \textbf{Treinamento original (S2 $\to$ NAIP):}
+      \begin{itemize}
+        \item Sentinel-2: $\sim$10\,m/px, resposta espectral própria
+        \item NAIP: $\sim$1\,m/px (EUA) — alvo do treino
+        \item $\sim$44M pares cobrindo os EUA inteiros
+      \end{itemize}
+      \vspace{0.3em}
+      \textbf{\textit{Domain gap} no nosso caso:}
+      \begin{itemize}
+        \item Planet ($\sim$3\,m/px) $\neq$ S2 em resposta espectral
+        \item Aerofoto RS ($\sim$0{,}5\,m/px) $\neq$ NAIP em escala
+        \item Zero-shot gera texturas incompatíveis com a região
+      \end{itemize}
+      \vspace{0.3em}
+      \textbf{Solução --- \textit{fine-tuning}:}
+      \begin{itemize}
+        \item 1.476 chips locais Planet $\to$ aerofoto
+        \item Corrige o domain gap com dados mínimos
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \centering
+      \begin{tabular}{c}
+        \textbf{Domínio original} \\[0.3em]
+        \fbox{\parbox{0.85\linewidth}{\centering\small
+          Sentinel-2 (16 frames)\\$\sim$10\,m/px
+        }}\\[0.2em]
+        $\downarrow$ SATLAS pretrained \\[0.2em]
+        \fbox{\parbox{0.85\linewidth}{\centering\small
+          NAIP (EUA)\\$\sim$1\,m/px
+        }}\\[0.8em]
+
+        \textbf{Nosso domínio} \\[0.3em]
+        \fbox{\parbox{0.85\linewidth}{\centering\small
+          PlanetScope (16 frames)\\$\sim$3\,m/px
+        }}\\[0.2em]
+        $\downarrow$ \textit{fine-tuning} \\[0.2em]
+        \fbox{\parbox{0.85\linewidth}{\centering\small
+          Aerofoto RS\\$\sim$0{,}5\,m/px
+        }}
+      \end{tabular}
+    \end{column}
+  \end{columns}
+
 \end{frame}
 
 % ----------------------------------------------------------
@@ -235,6 +336,56 @@
       equilíbrio espectral.}
     \end{column}
   \end{columns}
+
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Resultados visuais --- região de condomínio (crop 192\,px)}
+
+  \begin{center}
+    \includegraphics[width=0.97\textwidth]{cond_zoom_panel_192px.png}
+  \end{center}
+
+  \vspace{-0.2em}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}\small
+        \item \textbf{Planet (LR):} resolução $\approx$3\,m/px ---
+              bordas e telhados sem definição.
+        \item \textbf{SATLAS zero-shot:} sem \textit{fine-tuning},
+              o modelo ``acha'' texturas do domínio Sentinel-2/NAIP ---
+              incompatíveis com a aerofoto RS.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}\small
+        \item \textbf{Baseline} e \textbf{FFL $\lambda{=}0{,}1$:}
+              \textit{fine-tuning} recupera detalhe e corrige a paleta ---
+              resultado visualmente próximo.
+        \item \textbf{FFL $\lambda{=}1{,}0$:} textura ligeiramente mais
+              rica nas bordas e telhados --- ganho espectral (+PSD\_L2
+              $-$7,2\%) visível nas altas frequências.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+\end{frame}
+
+% ----------------------------------------------------------
+\begin{frame}{Resultados visuais --- malha urbana densa (crop 192\,px)}
+
+  \begin{center}
+    \includegraphics[width=0.97\textwidth]{urban_zoom_panel_192px.png}
+  \end{center}
+
+  \vspace{-0.2em}
+  {\small
+    Segunda região confirma o padrão: \textbf{Planet} borrado, SATLAS zero-shot
+    com artefatos de domínio, variantes \textit{fine-tuned} nítidas.
+    Diferenças entre Baseline / FFL $\lambda{=}0{,}1$ / FFL $\lambda{=}1{,}0$
+    são sutis visualmente --- o ganho da FFL é \emph{espectral} (PSD\_L2),
+    não pixelístico; por isso a métrica PSD\_L2 é indispensável.
+  }
 
 \end{frame}
 
